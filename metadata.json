@@ -1,0 +1,7 @@
+{
+  "name": "MatriCare AI - Maternal Health System",
+  "description": "An AI-powered system for early detection of High-Risk Pregnancy, IUGR, and Fetal Distress, featuring automated referral pathways to PMSMA centers.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
