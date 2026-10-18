@@ -5,12 +5,16 @@ import {
 } from "recharts";
 import { 
   Activity, AlertTriangle, Users, TrendingUp, Baby, Calendar, Phone, 
-  Utensils, MapPin, Heart, Plus, X, Save, Stethoscope
+  Utensils, MapPin, Heart, Plus, X, Save, Stethoscope, PiggyBank, ArrowRight
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useClinicalContext } from "../contexts/ClinicalContext";
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onTabChange }) => {
   const [viewMode, setViewMode] = useState<'patient' | 'center'>('patient');
   const { t } = useLanguage();
 
@@ -43,13 +47,13 @@ export const Dashboard: React.FC = () => {
          </div>
        </div>
 
-       {viewMode === 'patient' ? <PatientDashboard /> : <CenterDashboard />}
+       {viewMode === 'patient' ? <PatientDashboard onTabChange={onTabChange} /> : <CenterDashboard />}
     </div>
   );
 };
 
 // --- Patient View Component ---
-const PatientDashboard = () => {
+const PatientDashboard: React.FC<{ onTabChange?: (tab: string) => void }> = ({ onTabChange }) => {
   const { t, language } = useLanguage();
   const { vitals, addVitals, currentGestationalWeek } = useClinicalContext();
   
@@ -225,6 +229,33 @@ const PatientDashboard = () => {
                         <span className="px-2 py-1 bg-white/60 rounded text-[10px] text-orange-800 font-medium">#IronRich</span>
                         <span className="px-2 py-1 bg-white/60 rounded text-[10px] text-orange-800 font-medium">#HealthyMom</span>
                     </div>
+                 </div>
+
+                 {/* Child Future Investment Card */}
+                 <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200 rounded-xl p-5 shadow-sm space-y-2">
+                    <div className="flex items-center justify-between">
+                       <h4 className="font-bold text-teal-900 flex items-center gap-2 text-sm">
+                          <PiggyBank className="w-4 h-4 text-teal-700" />
+                          <span>{language === 'hi' ? 'बच्चे का वित्तीय भविष्य' : language === 'mr' ? 'मुलांचे आर्थिक नियोजन' : "Baby's Investment Plan"}</span>
+                       </h4>
+                       <span className="text-[10px] font-bold bg-teal-200 text-teal-800 px-2 py-0.5 rounded-full">8.2% SSY / NPS</span>
+                    </div>
+                    <p className="text-xs text-teal-800 leading-relaxed">
+                       {language === 'hi' 
+                         ? 'सुकन्या समृद्धि योजना (8.2%), नया एनपीएस वात्सल्य (2024), और पीपीएफ की तुलना करें और बच्चे के लिए करोड़पति प्लान बनाएं।'
+                         : language === 'mr'
+                         ? 'सुकन्या समृद्धी योजना (८.२%), नवीन एनपीएस वात्सल्य (२०२४), आणि म्युच्युअल फंड तुलना करा.'
+                         : 'Compare Sukanya Samriddhi (8.2%), new NPS Vatsalya (2024), PPF & Children\'s SIP with growth graphs & download plans.'}
+                    </p>
+                    {onTabChange && (
+                       <button
+                          onClick={() => onTabChange('childInvestment')}
+                          className="w-full mt-1 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold shadow-sm transition-colors flex items-center justify-center gap-1.5"
+                       >
+                          <span>Explore Child Investment Calculator</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                       </button>
+                    )}
                  </div>
             </div>
         </div>

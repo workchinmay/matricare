@@ -15,6 +15,7 @@ export const translations = {
       nutrition: "Diet Plan",
       locator: "Find Hospital",
       schemes: "Govt. Schemes",
+      childInvestment: "Child Investment",
     },
     dashboard: {
       patientView: "Mother View",
@@ -443,6 +444,7 @@ export const translations = {
       nutrition: "आहार योजना",
       locator: "अस्पताल खोजें",
       schemes: "सरकारी योजनाएं",
+      childInvestment: "बाल भविष्य निवेश",
     },
     dashboard: {
       patientView: "माँ का पेज",
@@ -871,6 +873,7 @@ export const translations = {
       nutrition: "आहार",
       locator: "दवाखाना शोधा",
       schemes: "सरकारी योजना",
+      childInvestment: "मुलांची गुंतवणूक",
     },
     dashboard: {
       patientView: "माता विभाग",

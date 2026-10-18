@@ -2,7 +2,7 @@
 
 
 import React from "react";
-import { Activity, Baby, Stethoscope, MapPin, LayoutDashboard, HeartPulse, Utensils, Globe, ScrollText, Footprints } from "lucide-react";
+import { Activity, Baby, Stethoscope, MapPin, LayoutDashboard, HeartPulse, Utensils, Globe, ScrollText, Footprints, PiggyBank } from "lucide-react";
 import { ChatBot } from "./ChatBot";
 import { useLanguage } from "../contexts/LanguageContext";
 import { Language } from "../types";
@@ -24,6 +24,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     { id: "ctg", label: t.nav.ctg, icon: HeartPulse },
     { id: "nutrition", label: t.nav.nutrition, icon: Utensils },
     { id: "schemes", label: t.nav.schemes, icon: ScrollText },
+    { id: "childInvestment", label: t.nav.childInvestment || "Child Investment", icon: PiggyBank },
     { id: "locator", label: t.nav.locator, icon: MapPin },
   ];
 

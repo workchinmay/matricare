@@ -60,6 +60,16 @@ export const USGAnalysis: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [result, setResult] = useState<USGResult | null>(null);
+  const [isManual, setIsManual] = useState(false);
+  const [manualMetrics, setManualMetrics] = useState({
+    bpd: "",
+    hc: "",
+    ac: "",
+    fl: "",
+    efw: "",
+    gestationalAge: ""
+  });
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
 
@@ -70,6 +80,7 @@ export const USGAnalysis: React.FC = () => {
       reader.onloadend = () => {
         setImage(reader.result as string);
         setResult(null); // Clear previous result
+        setIsManual(false);
       };
       reader.readAsDataURL(file);
     }
@@ -79,16 +90,62 @@ export const USGAnalysis: React.FC = () => {
     if (!image) return;
     setLoading(true);
     try {
-      // Extract base64 part
       const base64Data = image.split(",")[1];
       const data = await analyzeUSGImage(base64Data);
       setResult(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to analyze image. Please try again.");
+      const errorMessage = err?.message || "Unknown error";
+      alert(`Failed to analyze image: ${errorMessage}. You can enter values manually.`);
+      setIsManual(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const metrics = {
+      bpd: Math.round(parseFloat(manualMetrics.bpd) * 10) / 10 || 0,
+      hc: Math.round(parseFloat(manualMetrics.hc) * 10) / 10 || 0,
+      ac: Math.round(parseFloat(manualMetrics.ac) * 10) / 10 || 0,
+      fl: Math.round(parseFloat(manualMetrics.fl) * 10) / 10 || 0,
+      efw: Math.round(parseFloat(manualMetrics.efw)) || 0,
+      gestationalAge: Math.round(parseFloat(manualMetrics.gestationalAge) * 10) / 10 || 0
+    };
+
+    // Simple heuristic for diagnosis
+    let diagnosis: 'Normal Growth' | 'Suspected FGR' | 'Confirmed FGR' = 'Normal Growth';
+    if (metrics.efw > 0 && metrics.efw < 1000 && metrics.gestationalAge > 32) {
+      diagnosis = 'Suspected FGR';
+    }
+
+    setResult({
+      metrics,
+      diagnosis,
+      reasoning: "Analysis based on manually entered biometry data."
+    });
+  };
+
+  const handleRandomize = () => {
+    // Random Gestational Age between 20 and 40 weeks
+    const ga = Math.floor(Math.random() * (40 - 20 + 1)) + 20;
+    
+    // Approximate biometry based on GA (very rough estimates for demo)
+    const bpd = Math.round((ga * 2.5) * 10) / 10;
+    const hc = Math.round((ga * 9) * 10) / 10;
+    const ac = Math.round((ga * 8.5) * 10) / 10;
+    const fl = Math.round((ga * 1.9) * 10) / 10;
+    const efw = Math.round(Math.pow(ga, 2.8) / 15); // Rough weight estimate
+
+    setManualMetrics({
+      bpd: bpd.toString(),
+      hc: hc.toString(),
+      ac: ac.toString(),
+      fl: fl.toString(),
+      efw: efw.toString(),
+      gestationalAge: ga.toString()
+    });
   };
 
   return (
@@ -142,8 +199,122 @@ export const USGAnalysis: React.FC = () => {
                  {loading ? <Loader2 className="animate-spin" /> : <Ruler className="w-5 h-5" />}
                  {loading ? t.usg.processing : t.usg.analyze}
               </button>
+
+              <div className="flex gap-2">
+                <button 
+                   onClick={() => setIsManual(!isManual)}
+                   className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg border border-slate-200 text-sm font-medium hover:bg-slate-200 transition-colors"
+                >
+                   {isManual ? "Hide Manual Entry" : "Enter Manually"}
+                </button>
+                <button 
+                   onClick={() => {
+                     setResult({
+                       metrics: {
+                         bpd: 72,
+                         hc: 260,
+                         ac: 240,
+                         fl: 54,
+                         efw: 1250,
+                         gestationalAge: 28.4
+                       },
+                       diagnosis: 'Normal Growth',
+                       reasoning: 'Sample data provided for demonstration. All metrics are within the expected range for 28 weeks of gestation.'
+                     });
+                   }}
+                   className="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg border border-slate-200 text-sm font-medium hover:bg-slate-200 transition-colors"
+                >
+                   Try with Demo Data
+                </button>
+              </div>
            </div>
         </div>
+
+        {isManual && (
+          <div className="mt-8 p-6 bg-slate-50 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-slate-800">Manual Biometry Entry</h3>
+              <button 
+                type="button"
+                onClick={handleRandomize}
+                className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded"
+              >
+                <Activity className="w-3 h-3" /> Randomize Values
+              </button>
+            </div>
+            <form onSubmit={handleManualSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">BPD (mm)</label>
+                <input 
+                  type="number" 
+                  value={manualMetrics.bpd}
+                  onChange={(e) => setManualMetrics({...manualMetrics, bpd: e.target.value})}
+                  className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. 72"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">HC (mm)</label>
+                <input 
+                  type="number" 
+                  value={manualMetrics.hc}
+                  onChange={(e) => setManualMetrics({...manualMetrics, hc: e.target.value})}
+                  className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. 260"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">AC (mm)</label>
+                <input 
+                  type="number" 
+                  value={manualMetrics.ac}
+                  onChange={(e) => setManualMetrics({...manualMetrics, ac: e.target.value})}
+                  className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. 240"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">FL (mm)</label>
+                <input 
+                  type="number" 
+                  value={manualMetrics.fl}
+                  onChange={(e) => setManualMetrics({...manualMetrics, fl: e.target.value})}
+                  className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. 54"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">EFW (g)</label>
+                <input 
+                  type="number" 
+                  value={manualMetrics.efw}
+                  onChange={(e) => setManualMetrics({...manualMetrics, efw: e.target.value})}
+                  className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. 1250"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">GA (Weeks)</label>
+                <input 
+                  type="number" 
+                  step="0.1"
+                  value={manualMetrics.gestationalAge}
+                  onChange={(e) => setManualMetrics({...manualMetrics, gestationalAge: e.target.value})}
+                  className="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none"
+                  placeholder="e.g. 28.4"
+                />
+              </div>
+              <div className="col-span-full mt-2">
+                <button 
+                  type="submit"
+                  className="w-full py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  Generate Analysis from Manual Data
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Results Section */}
@@ -167,23 +338,23 @@ export const USGAnalysis: React.FC = () => {
                  <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-3 rounded-lg">
                        <span className="text-xs text-slate-500 uppercase">BPD</span>
-                       <p className="text-lg font-mono font-medium">{result.metrics.bpd ?? '--'} mm</p>
+                       <p className="text-lg font-mono font-medium">{(result.metrics.bpd && result.metrics.bpd > 0) ? Math.round(result.metrics.bpd * 10) / 10 : '--'} mm</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-lg">
                        <span className="text-xs text-slate-500 uppercase">HC</span>
-                       <p className="text-lg font-mono font-medium">{result.metrics.hc ?? '--'} mm</p>
+                       <p className="text-lg font-mono font-medium">{(result.metrics.hc && result.metrics.hc > 0) ? Math.round(result.metrics.hc * 10) / 10 : '--'} mm</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-lg">
                        <span className="text-xs text-slate-500 uppercase">AC</span>
-                       <p className="text-lg font-mono font-medium">{result.metrics.ac ?? '--'} mm</p>
+                       <p className="text-lg font-mono font-medium">{(result.metrics.ac && result.metrics.ac > 0) ? Math.round(result.metrics.ac * 10) / 10 : '--'} mm</p>
                     </div>
                     <div className="bg-slate-50 p-3 rounded-lg">
                        <span className="text-xs text-slate-500 uppercase">FL</span>
-                       <p className="text-lg font-mono font-medium">{result.metrics.fl ?? '--'} mm</p>
+                       <p className="text-lg font-mono font-medium">{(result.metrics.fl && result.metrics.fl > 0) ? Math.round(result.metrics.fl * 10) / 10 : '--'} mm</p>
                     </div>
                     <div className="col-span-2 bg-indigo-50 p-3 rounded-lg border border-indigo-100">
                        <span className="text-xs text-indigo-500 uppercase">Estimated Fetal Weight (EFW)</span>
-                       <p className="text-xl font-mono font-bold text-indigo-700">{result.metrics.efw ?? '--'} g</p>
+                       <p className="text-xl font-mono font-bold text-indigo-700">{(result.metrics.efw && result.metrics.efw > 0) ? Math.round(result.metrics.efw) : '--'} g</p>
                     </div>
                  </div>
               </div>

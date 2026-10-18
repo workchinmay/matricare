@@ -11,6 +11,7 @@ import { PMSMALocator } from "./components/PMSMALocator";
 import { NutritionPlanner } from "./components/NutritionPlanner";
 import { GovernmentSchemes } from "./components/GovernmentSchemes";
 import { PregnancyTracker } from "./components/PregnancyTracker";
+import { ChildInvestmentPlanner } from "./components/ChildInvestmentPlanner";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { ClinicalProvider } from "./contexts/ClinicalContext";
 
@@ -20,7 +21,7 @@ const AppContent: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard onTabChange={setActiveTab} />;
       case "risk":
         return <RiskAssessment />;
       case "tracker":
@@ -34,7 +35,9 @@ const AppContent: React.FC = () => {
       case "locator":
         return <PMSMALocator />;
       case "schemes":
-        return <GovernmentSchemes />;
+        return <GovernmentSchemes onTabChange={setActiveTab} />;
+      case "childInvestment":
+        return <ChildInvestmentPlanner />;
       default:
         return <Dashboard />;
     }

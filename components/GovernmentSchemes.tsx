@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Landmark, CheckCircle, FileText, IndianRupee, Calendar, Truck, ClipboardList, Sparkles, ArrowRight, PlusCircle, LayoutList, History, Filter, Map, Trash2 } from 'lucide-react';
+import { Landmark, CheckCircle, FileText, IndianRupee, Calendar, Truck, ClipboardList, Sparkles, ArrowRight, PlusCircle, LayoutList, History, Filter, Map, Trash2, PiggyBank } from 'lucide-react';
 
 interface TrackedApplication {
   schemeId: string;
@@ -12,7 +12,11 @@ interface TrackedApplication {
   dateAdded: string;
 }
 
-export const GovernmentSchemes: React.FC = () => {
+interface GovernmentSchemesProps {
+  onTabChange?: (tab: string) => void;
+}
+
+export const GovernmentSchemes: React.FC<GovernmentSchemesProps> = ({ onTabChange }) => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'all' | 'track'>('all');
   const [selectedState, setSelectedState] = useState<string>('all');
@@ -188,6 +192,30 @@ export const GovernmentSchemes: React.FC = () => {
       {activeTab === 'all' && (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-4">
           
+          {/* Child Investment Schemes Banner */}
+          <div className="bg-gradient-to-r from-teal-800 to-emerald-800 text-white p-5 rounded-2xl shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+             <div className="flex items-center gap-3">
+                <div className="bg-white/10 p-3 rounded-xl shrink-0">
+                   <PiggyBank className="w-6 h-6 text-teal-200" />
+                </div>
+                <div>
+                   <h3 className="font-bold text-base text-white">Looking for Child Investment & Future Schemes?</h3>
+                   <p className="text-xs text-teal-100 mt-0.5">
+                      Explore Sukanya Samriddhi Yojana (8.2%), new NPS Vatsalya (2024), PPF, and Children\'s SIP with interactive growth calculators and downloadable plans.
+                   </p>
+                </div>
+             </div>
+             {onTabChange && (
+                <button
+                   onClick={() => onTabChange('childInvestment')}
+                   className="shrink-0 bg-white text-teal-900 hover:bg-teal-50 px-4 py-2.5 rounded-xl font-bold text-xs shadow-sm transition-all flex items-center gap-1.5"
+                >
+                   <span>Open Child Investment Suite</span>
+                   <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+             )}
+          </div>
+
           {/* State Filter Bar */}
           <div className="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
              <div className="flex items-center gap-2 text-slate-700 font-bold min-w-fit">

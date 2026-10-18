@@ -1,11 +1,14 @@
 
+// Add type declaration to avoid "process is not defined" error during build
+declare const process: any;
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { ClinicalData, RiskResult, USGResult, CTGFeatures, CTGResult, LocationSearchResult, GroundingChunk, DietPlan, Language } from "../types";
 
 const getAiClient = () => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error("API Key not found");
+    throw new Error("Gemini API Key not found. Please ensure GEMINI_API_KEY is set in your environment.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -57,7 +60,7 @@ export const analyzeClinicalRisk = async (data: ClinicalData, language: Language
   };
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -75,9 +78,33 @@ export const analyzeUSGImage = async (base64Image: string): Promise<USGResult> =
   const ai = getAiClient();
 
   const prompt = `
-    Analyze this ultrasound image (or simulation thereof). Extract biometry metrics (BPD, HC, AC, FL, EFW).
-    Determine if there is a risk of IUGR (FGR).
-    Provide reasoning in simple English (medical terms are universal here).
+    You are a world-class Obstetric Radiologist and high-precision OCR expert. 
+    Analyze the provided ultrasound (USG) image and extract fetal biometry data.
+    
+    ### STEP 1: SCAN FOR MEASUREMENTS
+    Look for a table or list containing fetal biometry. Common labels:
+    - BPD (Biparietal Diameter)
+    - HC (Head Circumference)
+    - AC (Abdominal Circumference)
+    - FL (Femur Length)
+    - EFW (Estimated Fetal Weight)
+    - GA (Gestational Age)
+    
+    ### STEP 2: EXTRACT NUMBERS
+    - Extract the numeric values. 
+    - If a value is in cm, convert to mm (multiply by 10).
+    - If EFW is in kg, convert to g (multiply by 1000).
+    - If GA is "28w 3d", return 28.4.
+    
+    ### STEP 3: BE EXTREMELY AGGRESSIVE
+    - Even if the text is blurry or the table is hard to find, you MUST try to extract or estimate the values.
+    - Look for any numbers followed by 'mm', 'cm', or 'g'.
+    - If a specific metric is missing but others are present, use the Gestational Age (GA) to estimate the missing metric based on standard fetal growth charts.
+    - YOUR GOAL IS TO PROVIDE VALUES. Do not return null or 0 if you can make a reasonable clinical estimate from the context of the image.
+    - If you see a list of numbers without labels, try to map them to BPD, HC, AC, FL in that order (common report format).
+    
+    ### STEP 4: DIAGNOSIS
+    - Classify as "Normal Growth", "Suspected FGR", or "Confirmed FGR".
   `;
 
   const schema: Schema = {
@@ -101,7 +128,7 @@ export const analyzeUSGImage = async (base64Image: string): Promise<USGResult> =
   };
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-flash-latest",
     contents: {
       parts: [
         { inlineData: { mimeType: "image/jpeg", data: base64Image } },
@@ -139,7 +166,7 @@ export const analyzeCTGData = async (features: CTGFeatures): Promise<CTGResult> 
   };
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -157,36 +184,40 @@ export const extractCTGFeaturesFromImage = async (base64Image: string): Promise<
   const ai = getAiClient();
 
   const prompt = `
-    Analyze this Cardiotocography (CTG) paper trace image.
+    You are an expert in Fetal Monitoring. Analyze this Cardiotocography (CTG) paper trace image.
     
-    Visually extract the key parameters from the graph:
-    1. Baseline Heart Rate (Look at the FHR scale 60-200 bpm).
-    2. Count Accelerations (Increases of >15 bpm for >15s).
-    3. Count Uterine Contractions (Bottom graph).
-    4. Count Decelerations (Dips in FHR matching or following contractions).
-    5. Estimate Variability (STV).
+    The image contains two main graphs:
+    - Top Graph: Fetal Heart Rate (FHR) in bpm (usually 60-200 scale).
+    - Bottom Graph: Uterine Activity (UA) / Contractions (usually 0-100 scale).
 
-    Return numeric estimations for the fields.
+    Please extract the following parameters:
+    1. Baseline FHR: The mean level of the FHR when stable (excluding accelerations/decelerations).
+    2. Accelerations: Number of transient increases in FHR (>15 bpm for >15s).
+    3. Uterine Contractions: Number of peaks in the bottom graph over the trace duration.
+    4. Decelerations: Number of transient decreases in FHR.
+    5. Variability: Estimate the bandwidth of the FHR signal (Short Term Variability).
+
+    Return numeric estimations for all fields. If a field is not detectable, return null or a reasonable clinical estimate if possible, but prioritize accuracy.
   `;
 
   const schema: Schema = {
     type: Type.OBJECT,
     properties: {
-      baseline_heart_rate: { type: Type.NUMBER },
-      accelerations: { type: Type.NUMBER },
-      fetal_movement: { type: Type.NUMBER },
-      uterine_contractions: { type: Type.NUMBER },
-      light_decelerations: { type: Type.NUMBER },
-      severe_decelerations: { type: Type.NUMBER },
-      prolonged_decelerations: { type: Type.NUMBER },
-      abnormal_short_term_variability: { type: Type.NUMBER },
-      mean_value_of_short_term_variability: { type: Type.NUMBER },
+      baseline_heart_rate: { type: Type.NUMBER, nullable: true },
+      accelerations: { type: Type.NUMBER, nullable: true },
+      fetal_movement: { type: Type.NUMBER, nullable: true },
+      uterine_contractions: { type: Type.NUMBER, nullable: true },
+      light_decelerations: { type: Type.NUMBER, nullable: true },
+      severe_decelerations: { type: Type.NUMBER, nullable: true },
+      prolonged_decelerations: { type: Type.NUMBER, nullable: true },
+      abnormal_short_term_variability: { type: Type.NUMBER, nullable: true },
+      mean_value_of_short_term_variability: { type: Type.NUMBER, nullable: true },
     },
     required: ["baseline_heart_rate", "accelerations", "uterine_contractions"]
   };
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     contents: {
       parts: [
         { inlineData: { mimeType: "image/jpeg", data: base64Image } },
@@ -302,7 +333,7 @@ export const generateDietPlan = async (
   };
 
   const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
@@ -319,7 +350,7 @@ export const generateDietPlan = async (
 export const chatWithMatriBot = async (history: {role: string, parts: {text: string}[]}[], message: string): Promise<string> => {
   const ai = getAiClient();
   const chat = ai.chats.create({
-    model: "gemini-2.5-flash",
+    model: "gemini-3-flash-preview",
     config: {
       systemInstruction: "You are MatriBot, a helpful and empathetic maternal health assistant for rural India. Answer questions about pregnancy, hygiene, nutrition, and government schemes (PMSMA, JSY). Reply in the same language as the user (English, Hindi, or Marathi). Use very simple words. If a symptom sounds dangerous (bleeding, severe pain), advise visiting a doctor immediately.",
     },
